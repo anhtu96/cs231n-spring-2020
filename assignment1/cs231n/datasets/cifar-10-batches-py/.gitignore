@@ -1,0 +1,3 @@
+# exclude dataset files
+*
+!.gitignore
