@@ -34,7 +34,13 @@ def compute_saliency_maps(X, y, model):
     # 4) Finally, process the returned gradient to compute the saliency map.      #
     ###############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
+    loss_fn = tf.keras.losses.SparseCategoricalCrossentropy()
+    X = tf.Variable(X)
+    with tf.GradientTape() as tape:
+        scores = model(X)
+        correct_scores = tf.gather_nd(scores, tf.stack((tf.range(len(y)),y), axis=1))
+        grad = tape.gradient(correct_scores, X)
+    saliency = tf.math.reduce_max(tf.abs(grad), axis=3)
     pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -83,7 +89,16 @@ def make_fooling_image(X, target_y, model):
     # progress over iterations to check your algorithm.                          #
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
+    y = -1
+    X_var = tf.Variable(X_fooling)
+    while y != target_y:
+        with tf.GradientTape() as tape:
+            scores = model(X_var)
+            y = tf.argmax(scores, axis=-1)
+            correct_score = scores[:, target_y]
+            grad = tape.gradient(correct_score, X_var)
+            X_var.assign_add(learning_rate * grad / tf.norm(grad))
+    X_fooling = X_var.numpy()
     pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -102,7 +117,14 @@ def class_visualization_update_step(X, model, target_y, l2_reg, learning_rate):
     # Be very careful about the signs of elements in your code.            #
     ########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
+    X = tf.Variable(X)
+    with tf.GradientTape() as tape:
+        scores = model(X)
+        correct_score = scores[:, target_y]
+        R = l2_reg * tf.pow(tf.norm(X), 2)
+        grad = tape.gradient(correct_score - R, X)
+        X.assign_add(learning_rate * grad)
+    X = X.numpy()
     pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
