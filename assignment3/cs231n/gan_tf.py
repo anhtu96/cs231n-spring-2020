@@ -15,8 +15,7 @@ def leaky_relu(x, alpha=0.01):
     """
     # TODO: implement leaky ReLU
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+    return tf.maximum(alpha * x, x)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     
@@ -34,8 +33,7 @@ def sample_noise(batch_size, dim, seed=None):
         tf.random.set_seed(seed)
     # TODO: sample and return noise
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+    return tf.random.uniform((batch_size, dim), -1, 1)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     
@@ -59,8 +57,15 @@ def discriminator(seed=None):
     # HINT: tf.keras.models.Sequential might be helpful.                         #
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+    layers = [
+        tf.keras.layers.Dense(units=256, input_shape=(784,)),
+        tf.keras.layers.LeakyReLU(alpha=0.01),
+        tf.keras.layers.Dense(units=256),
+        tf.keras.layers.LeakyReLU(alpha=0.01),
+        tf.keras.layers.Dense(units=1)
+    ]
+    model = tf.keras.Sequential(layers=layers)
+    return model
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -87,8 +92,14 @@ def generator(noise_dim=NOISE_DIM, seed=None):
     # HINT: tf.keras.models.Sequential might be helpful.                         #
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+    layers = [
+        tf.keras.layers.Dense(units=1024, input_shape=(noise_dim,)),
+        tf.keras.layers.ReLU(),
+        tf.keras.layers.Dense(units=1024),
+        tf.keras.layers.ReLU(),
+        tf.keras.layers.Dense(units=784, activation='tanh')
+    ]
+    model = tf.keras.Sequential(layers=layers)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -109,9 +120,8 @@ def discriminator_loss(logits_real, logits_fake):
     """
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    bce = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+    loss = bce(tf.ones_like(logits_real), logits_real) + bce(tf.zeros_like(logits_fake), logits_fake)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
 
@@ -127,8 +137,8 @@ def generator_loss(logits_fake):
     """
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+    bce = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+    loss = bce(tf.ones_like(logits_fake), logits_fake)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
@@ -146,8 +156,8 @@ def get_solvers(learning_rate=1e-3, beta1=0.5):
     - G_solver: instance of tf.optimizers.Adam with correct learning_rate and beta1
     """
     # TODO: create an AdamOptimizer for D_solver and G_solver
-    D_solver = None
-    G_solver = None
+    D_solver = tf.optimizers.Adam(learning_rate, beta1)
+    G_solver = tf.optimizers.Adam(learning_rate, beta1)
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
     pass
@@ -169,8 +179,8 @@ def ls_discriminator_loss(scores_real, scores_fake):
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
-
+    loss = tf.reduce_mean(tf.square(scores_real-1)) + tf.reduce_mean(tf.square(scores_fake))
+    loss /= 2.0
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
 
@@ -187,7 +197,7 @@ def ls_generator_loss(scores_fake):
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    loss = tf.reduce_mean(tf.square(scores_fake-1)) / 2
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
@@ -209,8 +219,21 @@ def dc_discriminator():
     # HINT: tf.keras.models.Sequential might be helpful.                         #
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+    layers = [
+        tf.keras.layers.Reshape(target_shape=(28, 28, 1), input_shape=(784,)),
+        tf.keras.layers.Conv2D(filters=32, kernel_size=5, strides=(1,1)),
+        tf.keras.layers.LeakyReLU(0.01),
+        tf.keras.layers.MaxPool2D(pool_size=(2,2)),
+        tf.keras.layers.Conv2D(filters=64, kernel_size=5, strides=(1,1)),
+        tf.keras.layers.LeakyReLU(0.01),
+        tf.keras.layers.MaxPool2D(pool_size=(2,2)),
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.Dense(units=4*4*64),
+        tf.keras.layers.LeakyReLU(0.01),
+        tf.keras.layers.Dense(units=1)
+    ]
+    model = tf.keras.Sequential(layers=layers)
+    
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -232,8 +255,17 @@ def dc_generator(noise_dim=NOISE_DIM):
     # TODO: implement architecture
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
-
+    layers = [
+        tf.keras.layers.Dense(units=1024, input_shape=(noise_dim,), activation='relu'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dense(units=7*7*128, activation='relu'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Reshape(target_shape=(7,7,128)),
+        tf.keras.layers.Conv2DTranspose(filters=64, kernel_size=4, strides=(2,2), padding='same', activation='relu'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Conv2DTranspose(filters=1, kernel_size=4, strides=(2,2), padding='same', activation='tanh')
+    ]
+    model = tf.keras.Sequential(layers=layers)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return model
 
